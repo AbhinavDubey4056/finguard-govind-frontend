@@ -1008,10 +1008,35 @@ def main_app():
     
     # Redirect when "Upload" is selected
     if nav_mode == "Upload":
+        st.warning("⚠️ You are entering the Live Verification Terminal.")
+        st.markdown("Click the button below to launch the secure session in a new window.")
+        
+        # Robust HTML Button that always works
         st.markdown(
-            '<meta http-equiv="refresh" content="0; url=https://finguard-render-qxctnlejjwbxx3mxf7txhr.streamlit.app/">',
+            """
+            <a href="https://finguard-render-qxctnlejjwbxx3mxf7txhr.streamlit.app/" target="_blank" style="text-decoration:none;">
+                <button style="
+                    background-color:#FF4B4B; 
+                    color:white; 
+                    border:none; 
+                    padding:15px 32px; 
+                    text-align:center; 
+                    text-decoration:none; 
+                    display:inline-block; 
+                    font-size:16px; 
+                    border-radius:8px; 
+                    cursor:pointer;
+                    width:100%;
+                    font-weight:bold;
+                    box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+                    transition: all 0.3s ease;">
+                    🚀 LAUNCH UPLOAD TERMINAL
+                </button>
+            </a>
+            """, 
             unsafe_allow_html=True
         )
+        st.stop()
 
     # ==========================
     #      UPLOAD UI

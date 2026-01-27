@@ -1004,7 +1004,14 @@ def main_app():
     with col_title:
         st.markdown('<h1 style="margin-top:0;">FINGUARD AGENT Dashboard</h1>', unsafe_allow_html=True)
     with col_nav:
-        nav_mode = st.selectbox("Navigation", ["Upload", "Live", "Database"], label_visibility="collapsed")
+        nav_mode = st.selectbox("Navigation", ["Live", "Upload", "Database"], label_visibility="collapsed")
+    
+    # Redirect when "Upload" is selected
+    if nav_mode == "Upload":
+        st.markdown(
+            '<meta http-equiv="refresh" content="0; url=https://finguard-render-qxctnlejjwbxx3mxf7txhr.streamlit.app/">',
+            unsafe_allow_html=True
+        )
 
     # ==========================
     #      UPLOAD UI

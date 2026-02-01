@@ -11,7 +11,7 @@ from firebase_admin import credentials, firestore
 import cv2
 import tempfile
 import json # Added for Integrity Check parsing
-BACKEND_URL = "https://finguard-live-backend-733215113656.asia-south2.run.app"
+BACKEND_URL = "https://AbhinavDubey4056-finguard-govind.hf.space"
 
 # --- PAGE CONFIGURATION ---
 st.set_page_config(
@@ -1091,6 +1091,11 @@ def main_app():
     #      LIVE MODE UI (Combined)
     # ==========================
     elif nav_mode == "Live":
+        # Add initial log when entering Live mode
+        if "live_mode_initialized" not in st.session_state:
+            st.session_state.live_mode_initialized = True
+            add_log("🛡️ Live Mode Activated - Initializing security scan...")
+        
         # --- INTEGRITY CHECK DEPENDENCIES ---
         try:
             from streamlit_js_eval import streamlit_js_eval
@@ -1115,11 +1120,13 @@ def main_app():
                 for log in reversed(st.session_state.logs):
                     if "ALERT" in log or "SPOOF" in log:
                         st.error(log)
+                    elif "═══" in log:
+                        st.success(log)
                     elif "INTEGRITY" in log:
                         st.success(log)
                     elif "VM DETECTED" in log:
                         st.warning(log)
-                    elif "HARDWARE" in log:
+                    elif "HARDWARE" in log or "NETWORK" in log or "AUDIO" in log or "DISPLAY" in log or "LOCATION" in log:
                         st.info(log)
                     else:
                         st.caption(log)
@@ -1230,8 +1237,11 @@ def main_app():
                     'audio_fp': device_data.get('audio_fp', 'Unknown')
                 }
                 
+                # Always log the complete security status (run only once)
                 if not st.session_state.security_scanned:
                     # -- INTEGRITY LOGIC --
+                    
+                    add_log("═══ SECURITY SCAN INITIATED ═══")
                     
                     # 1. LOG CORES & RAM & OS
                     add_log(f"HARDWARE: {d_os} | {d_browser} | Cores: {d_cores} | RAM: ~{d_mem} GB")
@@ -1250,8 +1260,41 @@ def main_app():
                         add_log("🚨 SECURITY ALERT: Browser Automation Detected!")
                     else:
                         add_log("INTEGRITY: Browser environment is native.")
+                    
+                    # 5. Audio Fingerprint
+                    add_log(f"AUDIO: Audio context state: {device_data.get('audio_fp', 'Unknown')}")
+                    
+                    # 6. Screen Resolution
+                    add_log(f"DISPLAY: Screen resolution {device_data.get('screen_res', 'Unknown')}")
+                    
+                    # 7. Timezone
+                    add_log(f"LOCATION: Timezone {device_data.get('timezone', 'Unknown')}")
+                    
+                    add_log("═══ SECURITY SCAN COMPLETE ═══")
 
                     st.session_state.security_scanned = True
+                    
+                # If scan already complete, ensure logs persist by checking if logs are empty
+                elif len(st.session_state.logs) == 0:
+                    # Re-add logs if they were cleared
+                    add_log("═══ SECURITY STATUS (CACHED) ═══")
+                    add_log(f"HARDWARE: {d_os} | {d_browser} | Cores: {d_cores} | RAM: ~{d_mem} GB")
+                    if "SwiftShader" in d_gpu or "llvmpipe" in d_gpu:
+                        add_log(f"⚠️ VM DETECTED: Renderer '{d_gpu}' is virtual.")
+                    else:
+                        add_log(f"HARDWARE: GPU '{d_gpu}' verified.")
+                    add_log(f"NETWORK: Connection type '{d_conn}'.")
+                    if d_auto:
+                        add_log("🚨 SECURITY ALERT: Browser Automation Detected!")
+                    else:
+                        add_log("INTEGRITY: Browser environment is native.")
+                    add_log(f"AUDIO: Audio context state: {device_data.get('audio_fp', 'Unknown')}")
+                    add_log(f"DISPLAY: Screen resolution {device_data.get('screen_res', 'Unknown')}")
+                    add_log(f"LOCATION: Timezone {device_data.get('timezone', 'Unknown')}")
+            else:
+                # Log when waiting for device data
+                if not st.session_state.security_scanned:
+                    add_log("⏳ Collecting hardware fingerprint from browser...")
 
 
         # --- MAIN HEADER ---

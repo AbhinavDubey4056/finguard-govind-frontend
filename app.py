@@ -11,7 +11,7 @@ from firebase_admin import credentials, firestore
 import cv2
 import tempfile
 import json # Added for Integrity Check parsing
-BACKEND_URL = "https://AbhinavDubey4056-finguard-govind.hf.space"
+BACKEND_URL = "https://finguard-live-backend-733215113656.asia-south2.run.app"
 
 # --- PAGE CONFIGURATION ---
 st.set_page_config(
@@ -898,9 +898,9 @@ def login_page():
             <div class="sidebar-box">
                 <h3>Instructions</h3>
                 <p class="sidebar-text">
-                    1. Authenticate your username as "admin".<br>
-                    2. Input the password as "1234".<br>
-                    3. Complete the 5-phrase sequence verification i.e finguard, ai, is, the, best .<br>
+                    1. Authenticate your username.<br>
+                    2. Input the password.<br>
+                    3. Complete the 5-phrase sequence verification.<br>
                     4. System access is logged and monitored.
                 </p>
                 <h3>About</h3>
@@ -1006,7 +1006,6 @@ def main_app():
     with col_nav:
         nav_mode = st.selectbox("Navigation", ["Live", "Upload", "Database"], label_visibility="collapsed")
     
-    # Redirect when "Upload" is selected
     if nav_mode == "Upload":
         st.warning("⚠️ You are entering the Live Verification Terminal.")
         st.markdown("Click the button below to launch the secure session in a new window.")
@@ -1133,21 +1132,38 @@ def main_app():
         if not DEPENDENCIES_INSTALLED:
             st.error("Missing dependencies. Run: pip install streamlit-js-eval")
         else:
-            # --- MILITARY-GRADE FINGERPRINTING SCRIPT (from app1.py) ---
+            # --- MILITARY-GRADE FINGERPRINTING SCRIPT (Corrected for Accuracy) ---
             fingerprint_script = """
             (async function() {
                 var details = {
                     cores: navigator.hardwareConcurrency || 'Unknown',
                     memory: navigator.deviceMemory || 'Unknown',
-                    platform: navigator.platform || 'Unknown',
                     webdriver: navigator.webdriver || false,
                     screen_res: window.screen.width + "x" + window.screen.height,
                     timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
                     gpu: 'Unknown',
                     connection: 'Unknown',
-                    battery: 'No Battery/Desktop',
-                    audio_fp: 'Unknown'
+                    audio_fp: 'Unknown',
+                    userAgent: navigator.userAgent
                 };
+                
+                // OS Detection (More Accurate)
+                var ua = navigator.userAgent;
+                var os = "Unknown OS";
+                if (ua.indexOf("Win") !== -1) os = "Windows";
+                if (ua.indexOf("Mac") !== -1) os = "MacOS";
+                if (ua.indexOf("Linux") !== -1) os = "Linux";
+                if (ua.indexOf("Android") !== -1) os = "Android";
+                if (ua.indexOf("iPhone") !== -1 || ua.indexOf("iPad") !== -1) os = "iOS";
+                details.os = os;
+
+                // Browser Detection
+                var browser = "Unknown Browser";
+                if (ua.indexOf("Firefox") !== -1) browser = "Firefox";
+                else if (ua.indexOf("Chrome") !== -1) browser = "Chrome"; 
+                else if (ua.indexOf("Safari") !== -1) browser = "Safari";
+                else if (ua.indexOf("Edg") !== -1) browser = "Edge";
+                details.browser = browser;
                 
                 try {
                     var canvas = document.createElement("canvas");
@@ -1169,22 +1185,19 @@ def main_app():
                     details.audio_fp = audioCtx.state; 
                     audioCtx.close();
                 } catch(e) { details.audio_fp = "Not Supported"; }
-
-                try {
-                    if (navigator.getBattery) {
-                        let batt = await navigator.getBattery();
-                        details.battery = (batt.level * 100) + "% " + (batt.charging ? "(Charging)" : "(On Battery)");
-                    }
-                } catch(e) {}
                 
                 return JSON.stringify(details);
             })()
             """
             
+            # Use session state counter for key to allow refresh without constant re-execution
+            if 'security_scan_count' not in st.session_state:
+                st.session_state.security_scan_count = 0
+            
             js_data_str = streamlit_js_eval(
                 js_expressions=fingerprint_script, 
                 want_output=True, 
-                key="security_scan_ultra"
+                key=f"security_scan_v{st.session_state.security_scan_count}" 
             )
 
             # Parse JSON
@@ -1200,15 +1213,28 @@ def main_app():
                 d_cores = device_data.get('cores', 'Unknown')
                 d_mem = device_data.get('memory', 'Unknown')
                 d_gpu = device_data.get('gpu', 'Unknown')
-                d_batt = device_data.get('battery', 'Unknown')
                 d_conn = device_data.get('connection', 'Unknown')
                 d_auto = device_data.get('webdriver')
+                d_os = device_data.get('os', 'Unknown')
+                d_browser = device_data.get('browser', 'Unknown')
+                
+                # Store device data in session state for Security Status tab
+                st.session_state.device_info = {
+                    'cores': d_cores,
+                    'memory': d_mem,
+                    'gpu': d_gpu,
+                    'connection': d_conn,
+                    'webdriver': d_auto,
+                    'os': d_os,
+                    'browser': d_browser,
+                    'audio_fp': device_data.get('audio_fp', 'Unknown')
+                }
                 
                 if not st.session_state.security_scanned:
                     # -- INTEGRITY LOGIC --
                     
-                    # 1. LOG CORES & RAM
-                    add_log(f"HARDWARE: CPU Cores: {d_cores} | RAM: ~{d_mem} GB")
+                    # 1. LOG CORES & RAM & OS
+                    add_log(f"HARDWARE: {d_os} | {d_browser} | Cores: {d_cores} | RAM: ~{d_mem} GB")
                     
                     # 2. VM/Bot Check (GPU)
                     if "SwiftShader" in d_gpu or "llvmpipe" in d_gpu:
@@ -1216,16 +1242,10 @@ def main_app():
                     else:
                         add_log(f"HARDWARE: GPU '{d_gpu}' verified.")
 
-                    # 3. Power Source Check
-                    if "No Battery" in d_batt:
-                         add_log("INFO: Device appears to be a Desktop or Server (No Battery).")
-                    else:
-                         add_log(f"POWER: Battery detected at {d_batt}.")
-
-                    # 4. Network
+                    # 3. Network
                     add_log(f"NETWORK: Connection type '{d_conn}'.")
 
-                    # 5. Automation
+                    # 4. Automation
                     if d_auto:
                         add_log("🚨 SECURITY ALERT: Browser Automation Detected!")
                     else:
@@ -1671,25 +1691,28 @@ def main_app():
 
         with tab_security:
             st.subheader("Forensic Metadata")
-            if device_data:
+            
+            if hasattr(st.session_state, 'device_info') and st.session_state.device_info:
+                device_info = st.session_state.device_info
+                
                 c1, c2, c3 = st.columns(3)
                 with c1:
                     st.caption("DEVICE IDENTITY")
-                    st.write(f"**CPU Cores:** {d_cores}")
-                    st.write(f"**RAM:** ~{d_mem} GB")
-                    st.write(f"**GPU:** {d_gpu}")
+                    st.write(f"**OS:** {device_info.get('os', 'Unknown')}")
+                    st.write(f"**Browser:** {device_info.get('browser', 'Unknown')}")
+                    st.write(f"**Cores:** {device_info.get('cores', 'Unknown')}")
                 with c2:
                     st.caption("ENVIRONMENT")
-                    st.write(f"**Battery:** {d_batt}")
-                    st.write(f"**Net Type:** {d_conn}")
-                    st.write(f"**Timezone:** {device_data.get('timezone')}")
+                    st.write(f"**RAM:** ~{device_info.get('memory', 'Unknown')} GB")
+                    st.write(f"**GPU:** {device_info.get('gpu', 'Unknown')}")
+                    st.write(f"**Net Type:** {device_info.get('connection', 'Unknown')}")
                 with c3:
                     st.caption("SECURITY")
-                    st.write(f"**Automation:** {'DETECTED 🚨' if device_data.get('webdriver') else 'Clean'}")
-                    st.write(f"**Audio State:** {device_data.get('audio_fp')}")
+                    st.write(f"**Automation:** {'DETECTED 🚨' if device_info.get('webdriver') else 'Clean'}")
+                    st.write(f"**Audio State:** {device_info.get('audio_fp', 'Unknown')}")
                 
                 with st.expander("View Raw JSON Payload"):
-                    st.json(device_data)
+                    st.json(device_info)
             else:
                 st.warning("Synchronizing with hardware... please wait.")
 

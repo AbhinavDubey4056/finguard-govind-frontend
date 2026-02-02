@@ -11,7 +11,7 @@ from firebase_admin import credentials, firestore
 import cv2
 import tempfile
 import json # Added for Integrity Check parsing
-BACKEND_URL = "https://AbhinavDubey4056-finguard-govind.hf.space"
+BACKEND_URL = "https://finguard-live-backend-733215113656.asia-south2.run.app"
 
 # --- PAGE CONFIGURATION ---
 st.set_page_config(
@@ -40,6 +40,7 @@ if not firebase_admin._apps:
             
     except Exception as e:
         st.error(f"Failed to initialize Firebase: {e}")
+
 
 db = firestore.client()
 
@@ -1554,9 +1555,40 @@ def main_app():
                     const scores = result.scores;
                     const video = scores.video;
                     const audio = scores.audio;
+                    
+                    // --- UPDATED LOGIC: Handle 0% Scores as 'TRY AGAIN' ---
+                    if (video.score === 0 || audio.score === 0) {
+                        let html = `
+                        <div style="margin-top:20px; color: white; text-align: center;">
+                             <div style="margin-bottom:15px; display:grid; grid-template-columns:1fr 1fr; gap:10px;">
+                                <div style="background:#13161c; padding:10px; border-radius:8px; border:1px solid #333;">
+                                    <div style="font-size:0.7em; opacity:0.6">VIDEO</div>
+                                    <div style="font-size:1.1em; font-weight:bold">${(video.score * 100).toFixed(1)}%</div>
+                                </div>
+                                <div style="background:#13161c; padding:10px; border-radius:8px; border:1px solid #333;">
+                                    <div style="font-size:0.7em; opacity:0.6">AUDIO</div>
+                                    <div style="font-size:1.1em; font-weight:bold">${(audio.score * 100).toFixed(1)}%</div>
+                                </div>
+                            </div>
+
+                            <div style="padding:20px; background:rgba(255, 145, 77, 0.1); border:2px solid #FF914D; border-radius:12px;">
+                                <h2 style="margin:0; color:#FF914D; font-size:1.5em;">⚠️ TRY AGAIN</h2>
+                                <p style="margin:8px 0 0 0; opacity:0.9; color: #FF914D; font-weight: 500;">
+                                    Analysis Inconclusive (0% Score Detected)
+                                </p>
+                                <p style="margin-top:12px; font-size: 0.85rem; color: rgba(255,255,255,0.7);">
+                                    Please ensure you are in a well-lit environment and speaking clearly.
+                                </p>
+                            </div>
+                        </div>
+                        `;
+                        document.getElementById('results').innerHTML = html;
+                        return; // Stop execution here so it doesn't show "Access Granted"
+                    }
+                    // -----------------------------------------------------
+
                     const isPass = result.final_verdict === 'PASS';
                     
-                    // --- FIX STARTS HERE ---
                     // 1. Safely access the nested code object
                     const codeData = (scores && scores.code) ? scores.code : {};
                     
@@ -1568,7 +1600,6 @@ def main_app():
                     if (codeData.confidence !== undefined && codeData.confidence !== null) {
                         sicAccuracy = (codeData.confidence * 100).toFixed(1) + "%";
                     }
-                    // --- FIX ENDS HERE ---
                     
                     let html = `
                     <div style="margin-top:20px; display:grid; grid-template-columns:1fr 1fr; gap:10px; color: white;">
@@ -1722,7 +1753,8 @@ def main_app():
 
                 .btn-control span { margin-right: 8px; font-size: 1.2em; }
             </style>
-            """# --- DYNAMIC INJECTION ---
+            """
+            # --- DYNAMIC INJECTION ---
             # 1. Inject Session Code
             video_recorder_html = video_recorder_html.replace("__SESSION_CODE__", st.session_state.session_code)
             
